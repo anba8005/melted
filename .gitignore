@@ -5,4 +5,15 @@ config.mak
 config.h
 .depend
 *~
+*.log
+.cproject
+.project
+mlt-melted++.pc
+mlt-melted.pc
+mlt-mvcp.pc
+packages.dat
+src/melted/melted
+src/modules/make.inc
+src/mvcp-client/mvcp-client
+src/mvcp-console/mvcp-console
 
