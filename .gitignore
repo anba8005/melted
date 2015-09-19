@@ -17,3 +17,4 @@ src/modules/make.inc
 src/mvcp-client/mvcp-client
 src/mvcp-console/mvcp-console
 .settings/
+.externalToolBuilders
