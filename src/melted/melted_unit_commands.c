@@ -462,8 +462,7 @@ int melted_set_unit_property( command_argument cmd_arg )
 	if (unit == NULL)
 		return RESPONSE_INVALID_UNIT;
 	else
-		melted_unit_set( unit, name_value );
-	return RESPONSE_SUCCESS;
+		return melted_unit_set( unit, name_value ) == 0 ? RESPONSE_SUCCESS : RESPONSE_MISSING_ARG;
 }
 
 int melted_get_unit_property( command_argument cmd_arg )

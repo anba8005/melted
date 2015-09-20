@@ -760,8 +760,28 @@ int melted_unit_set( melted_unit unit, char *name_value )
 	{
 		if ( strncmp( name_value, "producer.", 9 ) )
 		{
-			mlt_playlist playlist = mlt_properties_get_data( unit->properties, "playlist", NULL );
-			properties = MLT_PLAYLIST_PROPERTIES( playlist );
+			if ( strncmp( name_value, "clip.", 5 ) )
+			{
+				mlt_playlist playlist = mlt_properties_get_data( unit->properties, "playlist", NULL );
+				properties = MLT_PLAYLIST_PROPERTIES( playlist );
+			} else
+			{
+				name_value +=5;
+				char *value = strstr(name_value,".");
+				if (value == NULL)
+					return 1;
+				char index[512];
+				strncpy(index,name_value, value - name_value);
+				name_value = value + 1;
+				int clip = atoi(index);
+				if (clip == 0 && strcmp("0",index))
+					return 1;
+				mlt_playlist playlist = mlt_properties_get_data( unit->properties, "playlist", NULL );
+				mlt_producer producer = mlt_playlist_get_clip( playlist, clip );
+				if (producer == NULL)
+					return 1;
+				properties = MLT_PRODUCER_PROPERTIES(producer);
+			}
 		}
 		else
 		{
