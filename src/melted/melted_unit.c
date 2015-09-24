@@ -591,6 +591,20 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 		else
 			status->status = unit_playing;
 		status->unit = mlt_properties_get_int( unit->properties, "unit" );
+
+		if (status->status == unit_playing && mlt_properties_get_int(properties,"playing_position_fix")) {
+			mlt_consumer consumer =  mlt_properties_get_data( properties, "consumer", NULL );
+			int consumer_position = mlt_consumer_position(consumer);
+			int playlist_position = mlt_properties_get_int( MLT_PRODUCER_PROPERTIES( playlist ), "_position" );
+			int delta = playlist_position - consumer_position;
+			int global_position = mlt_producer_position(producer) - delta;
+			if (global_position < 0)
+				global_position = 0;
+			status->clip_index = mlt_playlist_get_clip_index_at(playlist,global_position);
+			status->position = global_position - mlt_playlist_clip_start(playlist,status->clip_index);
+			if (status->position < 0)
+				status->position = 0;
+		}
 	}
 	else
 	{
