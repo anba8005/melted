@@ -593,6 +593,7 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 		status->unit = mlt_properties_get_int( unit->properties, "unit" );
 
 		if (status->status == unit_playing && mlt_properties_get_int(properties,"playing_position_fix")) {
+			//
 			mlt_consumer consumer =  mlt_properties_get_data( properties, "consumer", NULL );
 			int consumer_position = mlt_consumer_position(consumer);
 			int playlist_position = mlt_properties_get_int( MLT_PRODUCER_PROPERTIES( playlist ), "_position" );
@@ -600,8 +601,15 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 			int global_position = mlt_producer_position(producer) - delta;
 			if (global_position < 0)
 				global_position = 0;
+			//
 			status->clip_index = mlt_playlist_get_clip_index_at(playlist,global_position);
-			status->position = global_position - mlt_playlist_clip_start(playlist,status->clip_index);
+			int in_point = 0;
+			//
+			mlt_playlist_get_clip_info( playlist, &info, status->clip_index );
+			if ( info.resource != NULL && strcmp( info.resource, "" ) )
+				in_point = info.frame_in;
+			//
+			status->position = global_position - mlt_playlist_clip_start(playlist,status->clip_index) + in_point;
 			if (status->position < 0)
 				status->position = 0;
 		}
@@ -678,12 +686,14 @@ int melted_unit_set_clip_in( melted_unit unit, int index, int32_t position )
 
 	if ( error == 0 )
 	{
-		melted_unit_play( unit, 0 );
+		if (!mlt_properties_get_int(properties,"sin_skip_goto"))
+			melted_unit_play( unit, 0 );
 		mlt_service_lock( MLT_PLAYLIST_SERVICE( playlist ) );
 		error = mlt_playlist_resize_clip( playlist, index, position, info.frame_out );
 		mlt_service_unlock( MLT_PLAYLIST_SERVICE( playlist ) );
 		update_generation( unit );
-		melted_unit_change_position( unit, index, 0 );
+		if (!mlt_properties_get_int(properties,"sin_skip_goto"))
+			melted_unit_change_position( unit, index, 0 );
 	}
 
 	return error;
@@ -701,13 +711,15 @@ int melted_unit_set_clip_out( melted_unit unit, int index, int32_t position )
 
 	if ( error == 0 )
 	{
-		melted_unit_play( unit, 0 );
+		if (!mlt_properties_get_int(properties,"sout_skip_goto"))
+			melted_unit_play( unit, 0 );
 		mlt_service_lock( MLT_PLAYLIST_SERVICE( playlist ) );
 		error = mlt_playlist_resize_clip( playlist, index, info.frame_in, position );
 		mlt_service_unlock( MLT_PLAYLIST_SERVICE( playlist ) );
 		update_generation( unit );
 		melted_unit_status_communicate( unit );
-		melted_unit_change_position( unit, index, -1 );
+		if (!mlt_properties_get_int(properties,"sout_skip_goto"))
+			melted_unit_change_position( unit, index, -1 );
 	}
 
 	return error;
