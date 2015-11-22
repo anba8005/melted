@@ -117,10 +117,10 @@ static void melted_unit_status_communicate( melted_unit unit )
 		{
 			if ( melted_unit_get_status( unit, &status ) == 0 )
 				/* if ( !( ( status.status == unit_playing || status.status == unit_paused ) &&
-						strcmp( status.clip, "" ) && 
-				    	!strcmp( status.tail_clip, "" ) && 
-						status.position == 0 && 
-						status.in == 0 && 
+						strcmp( status.clip, "" ) &&
+				    	!strcmp( status.tail_clip, "" ) &&
+						status.position == 0 &&
+						status.in == 0 &&
 						status.out == 0 ) ) */
 					mvcp_notifier_put( notifier, &status );
 		}
@@ -227,7 +227,7 @@ static void clean_unit( melted_unit unit )
 		mlt_service_unlock( MLT_PLAYLIST_SERVICE( playlist ) );
 		mlt_producer_close( info.producer );
 	}
-	
+
 	update_generation( unit );
 }
 
@@ -248,7 +248,7 @@ static void wipe_unit( melted_unit unit )
 		mlt_playlist_remove_region( playlist, 0, info.start );
 		mlt_service_unlock( MLT_PLAYLIST_SERVICE( playlist ) );
 	}
-	
+
 	update_generation( unit );
 }
 
@@ -263,7 +263,7 @@ void melted_unit_report_list( melted_unit unit, mvcp_response response )
 	mlt_playlist playlist = mlt_properties_get_data( properties, "playlist", NULL );
 
 	mvcp_response_printf( response, 1024, "%d\n", generation );
-		
+
 	for ( i = 0; i < mlt_playlist_count( playlist ); i ++ )
 	{
 		mlt_playlist_clip_info info;
@@ -272,13 +272,13 @@ void melted_unit_report_list( melted_unit unit, mvcp_response response )
 		title = mlt_properties_get( MLT_PRODUCER_PROPERTIES( info.producer ), "title" );
 		if ( title == NULL )
 			title = strip_root( unit, info.resource );
-		mvcp_response_printf( response, 10240, "%d \"%s\" %d %d %d %d %.2f\n", 
-								 i, 
+		mvcp_response_printf( response, 10240, "%d \"%s\" %d %d %d %d %.2f\n",
+								 i,
 								 title,
-								 info.frame_in, 
+								 info.frame_in,
 								 info.frame_out,
-								 info.frame_count, 
-								 info.length, 
+								 info.frame_count,
+								 info.length,
 								 info.fps );
 	}
 	mvcp_response_printf( response, 1024, "\n" );
@@ -578,6 +578,11 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 			status->tail_length = mlt_producer_get_length( clip );
 			status->clip_index = mlt_playlist_current_clip( playlist );
 			status->seek_flag = 1;
+			//
+			char* clip_id = mlt_properties_get( MLT_PRODUCER_PROPERTIES( clip ), "clip_id" );
+			if (clip_id != NULL) {
+				strncpy( status->clip_id, clip_id, sizeof( clip_id ) );
+			}
 		}
 
 		status->generation = mlt_properties_get_int( properties, "generation" );
@@ -592,26 +597,43 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 			status->status = unit_playing;
 		status->unit = mlt_properties_get_int( unit->properties, "unit" );
 
-		if (status->status == unit_playing && mlt_properties_get_int(properties,"playing_position_fix")) {
+		int playing_position_fix = mlt_properties_get_int(properties,"playing_position_fix");
+		if (status->status == unit_playing && playing_position_fix > 0) {
 			//
-			mlt_consumer consumer =  mlt_properties_get_data( properties, "consumer", NULL );
+			mlt_consumer consumer = mlt_properties_get_data(properties, "consumer", NULL);
 			int consumer_position = mlt_consumer_position(consumer);
-			int playlist_position = mlt_properties_get_int( MLT_PRODUCER_PROPERTIES( playlist ), "_position" );
+			int playlist_position = mlt_properties_get_int(MLT_PRODUCER_PROPERTIES(playlist), "_position");
 			int delta = playlist_position - consumer_position;
-			int global_position = mlt_producer_position(producer) - delta;
-			if (global_position < 0)
-				global_position = 0;
 			//
-			status->clip_index = mlt_playlist_get_clip_index_at(playlist,global_position);
-			int in_point = 0;
-			//
-			mlt_playlist_get_clip_info( playlist, &info, status->clip_index );
-			if ( info.resource != NULL && strcmp( info.resource, "" ) )
-				in_point = info.frame_in;
-			//
-			status->position = global_position - mlt_playlist_clip_start(playlist,status->clip_index) + in_point;
-			if (status->position < 0)
-				status->position = 0;
+			if (delta >= 0 && delta <= (playing_position_fix + 25)) { // workaround
+				//
+				int global_position = mlt_producer_position(producer) - delta;
+				if (global_position < 0)
+					global_position = 0;
+
+				//
+				status->clip_index = mlt_playlist_get_clip_index_at(playlist, global_position);
+				int in_point = 0;
+				//
+				mlt_playlist_get_clip_info(playlist, &info, status->clip_index);
+				if (info.resource != NULL && strcmp(info.resource, ""))
+					in_point = info.frame_in;
+				//
+				status->position = global_position - mlt_playlist_clip_start(playlist, status->clip_index) + in_point;
+				if (status->position < 0)
+					status->position = 0;
+				//
+				clip = mlt_playlist_get_clip(playlist, status->clip_index);
+				char* clip_id = mlt_properties_get(MLT_PRODUCER_PROPERTIES(clip), "clip_id");
+				if (clip_id != NULL) {
+					strncpy(status->clip_id, clip_id, sizeof(clip_id));
+				}
+			} else {
+				// skip position adjust - invalid delta and so on
+				status->clip_index = -1;
+				char* clip_id = "-1";
+				strncpy(status->clip_id, clip_id, sizeof(clip_id));
+			}
 		}
 	}
 	else
@@ -655,7 +677,7 @@ void melted_unit_change_position( melted_unit unit, int clip, int32_t position )
 			frame_offset = info.frame_in;
 		if ( frame_offset >= info.frame_out )
 			frame_offset = info.frame_out;
-		
+
 		mlt_producer_seek( producer, frame_start + frame_offset - info.frame_in );
 		mlt_properties_set_int( MLT_CONSUMER_PROPERTIES(consumer), "refresh", 1 );
 	}
