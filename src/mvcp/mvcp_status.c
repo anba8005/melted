@@ -121,7 +121,7 @@ char *mvcp_status_serialise( mvcp_status status, char *text, int length )
 			break;
 	}
 
-	snprintf( text, length, "%d %s \"%s\" %d %d %.2f %d %d %d \"%s\" %d %d %d %d %d %d %d\r\n",
+	snprintf( text, length, "%d %s \"%s\" %d %d %.2f %d %d %d \"%s\" %d %d %d %d %d %d %d %s\r\n",
 							status->unit,
 							status_string,
 							status->clip,
@@ -138,7 +138,8 @@ char *mvcp_status_serialise( mvcp_status status, char *text, int length )
 							status->tail_length,
 							status->seek_flag,
 							status->generation,
-							status->clip_index );
+							status->clip_index,
+							status->clip_id );
 
 	return text;
 }

@@ -67,6 +67,7 @@ typedef struct
 	int generation;
 	int clip_index;
 	int dummy;
+	char clip_id[ 2048 ];
 }
 *mvcp_status, mvcp_status_t;
 
