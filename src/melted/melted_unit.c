@@ -605,33 +605,32 @@ int melted_unit_get_status( melted_unit unit, mvcp_status status )
 			int playlist_position = mlt_properties_get_int(MLT_PRODUCER_PROPERTIES(playlist), "_position");
 			int delta = playlist_position - consumer_position;
 			//
-			if (delta >= 0 && delta <= (playing_position_fix + 25)) { // workaround
-				//
-				int global_position = mlt_producer_position(producer) - delta;
-				if (global_position < 0)
-					global_position = 0;
+			int global_position = mlt_producer_position(producer) - delta;
+			if (global_position < 0)
+				global_position = 0;
 
-				//
-				status->clip_index = mlt_playlist_get_clip_index_at(playlist, global_position);
-				int in_point = 0;
-				//
-				mlt_playlist_get_clip_info(playlist, &info, status->clip_index);
-				if (info.resource != NULL && strcmp(info.resource, ""))
-					in_point = info.frame_in;
-				//
-				status->position = global_position - mlt_playlist_clip_start(playlist, status->clip_index) + in_point;
-				if (status->position < 0)
-					status->position = 0;
-				//
-				clip = mlt_playlist_get_clip(playlist, status->clip_index);
+			//
+			clip_index = mlt_playlist_get_clip_index_at(playlist, global_position);
+			int in_point = 0;
+			//
+			mlt_playlist_get_clip_info(playlist, &info, clip_index);
+			if (info.resource != NULL && strcmp(info.resource, ""))
+				in_point = info.frame_in;
+			//
+			status->position = global_position - mlt_playlist_clip_start(playlist, clip_index) + in_point;
+			if (status->position < 0)
+				status->position = 0;
+			//
+			if (delta >= 0 && delta <= (playing_position_fix + 25)) { // workaround
+				// adjust current
+				clip = mlt_playlist_get_clip(playlist, clip_index);
 				char* clip_id = mlt_properties_get(MLT_PRODUCER_PROPERTIES(clip), "clip_id");
 				if (clip_id != NULL) {
 					strncpy(status->clip_id, clip_id, sizeof(clip_id));
 				}
 			} else {
-				// skip position adjust - invalid delta and so on
-				status->clip_index = -1;
-				char* clip_id = "-1";
+				// skip current adjust - invalid delta and so on
+				char* clip_id = "0";
 				strncpy(status->clip_id, clip_id, sizeof(clip_id));
 			}
 		}
