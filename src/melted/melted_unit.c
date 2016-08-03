@@ -818,11 +818,12 @@ int melted_unit_set( melted_unit unit, char *name_value )
 				if (value == NULL)
 					return 1;
 				char index[512];
+				memset(index, 0, sizeof index);
 				strncpy(index,name_value, value - name_value);
 				name_value = value + 1;
 				int clip = atoi(index);
-				/*if (clip == 0 && strcmp("0",index))
-					return 1; */
+				if (clip == 0 && strcmp("0",index))
+					return 1;
 				mlt_playlist playlist = mlt_properties_get_data( unit->properties, "playlist", NULL );
 				mlt_producer producer = mlt_playlist_get_clip( playlist, clip );
 				if (producer == NULL)
