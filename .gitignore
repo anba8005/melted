@@ -1,6 +1,7 @@
 *.o
 *.so
 *.so.*
+*.dylib
 config.mak
 config.h
 .depend
